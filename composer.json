@@ -1,5 +1,5 @@
 {
-    "name": "spatie/schema-org",
+    "name": "mediadata-tv/schema-org",
     "description": "A fluent builder Schema.org types and ld+json generator",
     "license": "MIT",
     "keywords": [
