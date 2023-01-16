@@ -128,13 +128,8 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
 
     protected function serializeIdentifier()
     {
-        if (
-            isset($this['identifier'])
-            && ! $this['identifier'] instanceof Type
-        ) {
-            $this->setProperty('@id', $this['identifier']);
-            unset($this['identifier']);
-        }
+        /*removed in order to not loose @id*/
+        return false;
     }
 
     public function toScript(): string
