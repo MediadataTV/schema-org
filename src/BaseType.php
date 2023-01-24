@@ -14,6 +14,16 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
     /** @var array */
     protected $properties = [];
 
+    protected static $contentTypes = [
+        "Movie",
+        "TVSeries",
+        "TVSeason",
+        "TVEpisode",
+        "Event",
+        "MusicEvent",
+        "SportsEvent"
+    ];
+
     public function getContext(): string
     {
         return 'https://schema.org';
@@ -21,7 +31,7 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
 
     public function getType(): string
     {
-        return (new ReflectionClass($this))->getShortName();
+        return substr(strrchr(get_class($this), '\\'), 1);
     }
 
     public function setProperty(string $property, $value)
@@ -69,34 +79,35 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
         return new ReferencedType($this);
     }
 
-    public function offsetExists($offset): bool
+    public function offsetExists($offset)
     {
         return array_key_exists($offset, $this->properties);
     }
 
-    public function offsetGet($offset): mixed
+    public function offsetGet($offset)
     {
         return $this->getProperty($offset);
     }
 
-    public function offsetSet($offset, $value): void
+    public function offsetSet($offset, $value)
     {
         $this->setProperty($offset, $value);
     }
 
-    public function offsetUnset($offset): void
+    public function offsetUnset($offset)
     {
         unset($this->properties[$offset]);
     }
 
     public function toArray(): array
     {
-        $this->serializeIdentifier();
+        $type = $this->getType();
+        $this->serializeIdentifier($type);
         $properties = $this->serializeProperty($this->getProperties());
 
         return [
             '@context' => $this->getContext(),
-            '@type' => $this->getType(),
+            '@type' => $type,
         ] + $properties;
     }
 
@@ -126,10 +137,20 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
         return $property;
     }
 
-    protected function serializeIdentifier()
+    protected function serializeIdentifier($type)
     {
-        /*removed in order to not loose @id*/
-        return false;
+        // Try to avoid magic identifier -> @id switching
+        if (in_array($type,self::$contentTypes)) {
+            return false;
+        }
+
+        if (
+            isset($this['identifier'])
+            && ! $this['identifier'] instanceof Type
+        ) {
+            $this->setProperty('@id', $this['identifier']);
+            unset($this['identifier']);
+        }
     }
 
     public function toScript(): string
@@ -137,7 +158,7 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
         return '<script type="application/ld+json">'.json_encode($this->toArray(), JSON_UNESCAPED_UNICODE).'</script>';
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize()
     {
         return $this->toArray();
     }
