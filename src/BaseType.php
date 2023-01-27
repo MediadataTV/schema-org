@@ -14,6 +14,16 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
     /** @var array */
     protected $properties = [];
 
+    protected static $contentTypes = [
+        "Movie",
+        "TVSeries",
+        "TVSeason",
+        "TVEpisode",
+        "Event",
+        "MusicEvent",
+        "SportsEvent"
+    ];
+
     public function getContext(): string
     {
         return 'https://schema.org';
@@ -21,7 +31,7 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
 
     public function getType(): string
     {
-        return (new ReflectionClass($this))->getShortName();
+        return substr(strrchr(get_class($this), '\\'), 1);
     }
 
     public function setProperty(string $property, $value)
@@ -91,13 +101,14 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
 
     public function toArray(): array
     {
-        $this->serializeIdentifier();
+        $type = $this->getType();
+        $this->serializeIdentifier($type);
         $properties = $this->serializeProperty($this->getProperties());
 
         return [
-            '@context' => $this->getContext(),
-            '@type' => $this->getType(),
-        ] + $properties;
+                '@context' => $this->getContext(),
+                '@type' => $type,
+            ] + $properties;
     }
 
     protected function serializeProperty($property)
@@ -126,11 +137,13 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
         return $property;
     }
 
-    protected function serializeIdentifier()
+    protected function serializeIdentifier($type)
     {
         // Try to avoid magic identifier -> @id switching
-        return false;
-        /*
+        if (in_array($type,self::$contentTypes)) {
+            return false;
+        }
+
         if (
             isset($this['identifier'])
             && ! $this['identifier'] instanceof Type
@@ -138,7 +151,6 @@ abstract class BaseType implements Type, ArrayAccess, JsonSerializable
             $this->setProperty('@id', $this['identifier']);
             unset($this['identifier']);
         }
-        */
     }
 
     public function toScript(): string
